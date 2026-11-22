@@ -16,6 +16,7 @@ Requires Node.js 20 or newer.
 npm install
 npm test
 npm run build
+npm run test:browser
 npm run serve
 ```
 
@@ -35,7 +36,7 @@ npm run serve
 - PDF visual comparison renders pages and reports per-page status, changed-pixel percentage and a red difference preview. It is a raster comparison, not a semantic or signature check.
 - PDF page reorder requires a complete, unique page permutation. Watermarking and metadata read/update are available.
 - Batch archive and spreadsheet tasks report progress and isolate per-file failures. Cancellation is cooperative between file operations; browser APIs that do not support abort cannot be interrupted mid-call.
-- OCR uses Tesseract.js with English language data. The first OCR run downloads worker/language resources from the Tesseract CDN; image files remain local, but OCR is not available on a fully offline first run.
+- OCR uses Tesseract.js with English language data. The first OCR run downloads worker/language resources from the Tesseract CDN; image files remain local, but OCR is not available on a fully offline first run. Metadata updates accept a JSON object with title, author, subject, keywords, creator and producer fields.
 - Browser regression tests use Playwright/Chromium and check the advanced UI and service-worker offline shell after initial registration.
 
 ## Current UI coverage and known gaps
