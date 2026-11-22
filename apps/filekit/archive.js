@@ -8,7 +8,7 @@ function readEntryBounded(entry,limit,path,signal){
  });
 }
 export async function extractZipSafely(file,{maxEntries=DEFAULT_LIMITS.maxZipEntries,maxExpandedBytes=DEFAULT_LIMITS.maxZipExpandedBytes,maxEntryBytes=DEFAULT_LIMITS.maxFileBytes,signal,onProgress=()=>{}}={}){
- const zip=await JSZip.loadAsync(file,{checkCRC32:true,createFolders:false});
+ const zip=await JSZip.loadAsync(await file.arrayBuffer(),{checkCRC32:true,createFolders:false});
  const entries=Object.values(zip.files).filter(x=>!x.dir);
  if(entries.length>maxEntries)throw new FileKitError("ZIP_ENTRY_LIMIT","Archive contains too many files.",{entries:entries.length,maxEntries});
  const plans=entries.map(entry=>{const path=safeArchivePath(entry.name);const declared=entry._data?.uncompressedSize;if(!Number.isSafeInteger(declared)||declared<0)throw new FileKitError("INVALID_ZIP_ENTRY","Archive entry has no valid expanded-size declaration.",{path});if(declared>maxEntryBytes)throw new FileKitError("ZIP_ENTRY_TOO_LARGE","An archive entry exceeds the size limit.",{path,declared,maxEntryBytes});return {entry,path,declared};});
