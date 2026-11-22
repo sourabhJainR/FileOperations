@@ -1,0 +1,18 @@
+{
+  "name": "FileKit — Local File Tools",
+  "short_name": "FileKit",
+  "description": "Private, browser-based file conversion and comparison tools.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6fb",
+  "theme_color": "#18243a",
+  "icons": [
+    {
+      "src": "./icons/filekit.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
