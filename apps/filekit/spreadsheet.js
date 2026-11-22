@@ -34,20 +34,15 @@ export function compareWorkbooks(left, right, XLSX) {
   });
 }
 
-/** Combine every sheet from every selected workbook into one XLSX file. */
-export function combineWorkbooks(files,XLSX,{maxSheets=1000}={}){
- if(!Array.isArray(files)||files.length<1)throw new FileKitError("NO_FILES","Choose at least one workbook.");
+/** Combine every sheet from every parsed source workbook into one XLSX file. */
+export function combineWorkbooks(sources,XLSX,{maxSheets=1000}={}){
+ if(!Array.isArray(sources)||sources.length<1)throw new FileKitError("NO_FILES","Choose at least one workbook.");
  const combined=XLSX.utils.book_new(),used=new Set();let count=0;
- const uniqueName=(candidate)=>{
-  let base=String(candidate).replace(/[\\/?*\[\]:]/g," ").replace(/^'+|'+$/g,"").trim().slice(0,31)||"Sheet";
-  let name=base,index=2;while(used.has(name.toLowerCase())){const suffix="_"+index++;name=base.slice(0,31-suffix.length)+suffix;}
-  used.add(name.toLowerCase());return name;
+ const uniqueName=candidate=>{
+  const base=String(candidate).replace(/[\\/?*\[\]:]/g," ").replace(/^'+|'+$/g,"").trim().slice(0,31)||"Sheet";
+  let name=base,index=2;while(used.has(name.toLowerCase())){const suffix="_"+index++;name=base.slice(0,31-suffix.length)+suffix;}used.add(name.toLowerCase());return name;
  };
- for(const file of files){
-  const ext=file.name.split(".").pop().toLowerCase();if(!["xlsx","xls","xlsm","csv"].includes(ext))throw new FileKitError("UNSUPPORTED_WORKBOOK","Only XLSX, XLS, XLSM and CSV files can be combined.",{file:file.name});
-  const workbook=XLSX.read(ext==="csv"?file.__text||"":file.__bytes,{type:ext==="csv"?"string":"array",cellDates:true});
-  for(const originalName of workbook.SheetNames){count++;if(count>maxSheets)throw new FileKitError("SHEET_LIMIT","Combined workbook contains too many worksheets.",{maxSheets});const source=file.name.replace(/\.[^.]+$/,"");const name=uniqueName(source+"_"+originalName);XLSX.utils.book_append_sheet(combined,workbook.Sheets[originalName],name);}
- }
+ for(const source of sources){for(const originalName of source.workbook.SheetNames){count++;if(count>maxSheets)throw new FileKitError("SHEET_LIMIT","Combined workbook contains too many worksheets.",{maxSheets});const base=source.name.replace(/\.[^.]+$/,"");const name=uniqueName(base+"_"+originalName);XLSX.utils.book_append_sheet(combined,source.workbook.Sheets[originalName],name);}}
  if(!count)throw new FileKitError("EMPTY_WORKBOOK","No worksheets were found in the selected files.");
  return XLSX.write(combined,{type:"array",bookType:"xlsx",cellDates:true});
 }
