@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { Document, Paragraph, TextRun, HeadingLevel, Packer } from "docx";
+import JSZip from "jszip";
 import { DEFAULT_LIMITS, FileKitError, assertWithinResourceLimit, validateFiles, safeOutputName } from "./core.js";
 
 const PAGE_W=612,PAGE_H=792,MARGIN=48;
@@ -45,10 +46,17 @@ export async function documentsToPdf(files,{maxPages=DEFAULT_LIMITS.maxPages,onP
  }
  return new Blob([await pdf.save()],{type:"application/pdf"});
 }
-export async function filesToPdf(files,options={}){
- const images=files.filter(isImage),docs=files.filter(isDocument);if(images.length+docs.length!==files.length)throw new FileKitError("UNSUPPORTED_INPUT","Choose image files or supported documents (DOCX, TXT, Markdown, CSV, HTML, RTF).");
- if(images.length&&docs.length)throw new FileKitError("MIXED_INPUT_TYPES","For consistent output, create PDFs from images or documents in separate runs.");
- return images.length?imagesToPdf(images,options):documentsToPdf(docs,options);
+export async function filesToPdf(files,{maxPages=DEFAULT_LIMITS.maxPages,onProgress=()=>{}}={}){
+ validateFiles(files);if(files.some(f=>!isImage(f)&&!isDocument(f)))throw new FileKitError("UNSUPPORTED_INPUT","Choose images or supported documents (DOCX, TXT, Markdown, CSV, HTML, RTF).");
+ const output=await PDFDocument.create();let pages=0;
+ for(let i=0;i<files.length;i++){const file=files[i],part=isImage(file)?await imagesToPdf([file],{maxPages}):await documentsToPdf([file],{maxPages});const parsed=await PDFDocument.load(await part.arrayBuffer());pages+=parsed.getPageCount();checkPdfPages(pages,maxPages);const copied=await output.copyPages(parsed,parsed.getPageIndices());copied.forEach(p=>output.addPage(p));onProgress({completed:i+1,total:files.length,percent:Math.round((i+1)*100/files.length),current:file.name});}
+ return new Blob([await output.save()],{type:"application/pdf"});
+}
+export async function pdfToImages(file,{scale=1.5,format="png",maxPages=DEFAULT_LIMITS.maxPages,onProgress=()=>{}}={}){
+ const pdfjs=await import("pdfjs-dist"),zip=new JSZip();const pdf=await pdfjs.getDocument({data:await file.arrayBuffer()}).promise;checkPdfPages(pdf.numPages,maxPages);
+ if(!["png","jpeg"].includes(format))throw new FileKitError("UNSUPPORTED_IMAGE_FORMAT","Choose PNG or JPEG output.");
+ for(let n=1;n<=pdf.numPages;n++){const page=await pdf.getPage(n),viewport=page.getViewport({scale});const width=Math.ceil(viewport.width),height=Math.ceil(viewport.height);assertWithinResourceLimit({width,height});const canvas=document.createElement("canvas");canvas.width=width;canvas.height=height;const ctx=canvas.getContext("2d",{alpha:false});await page.render({canvasContext:ctx,viewport}).promise;const blob=await new Promise(resolve=>canvas.toBlob(resolve,format==="jpeg"?"image/jpeg":"image/png",.92));if(!blob)throw new FileKitError("PDF_RENDER_FAILED","Could not export a PDF page as an image.");zip.file("page-"+String(n).padStart(4,"0")+"."+format,new Uint8Array(await blob.arrayBuffer()));canvas.width=0;canvas.height=0;onProgress({completed:n,total:pdf.numPages,percent:Math.round(n*100/pdf.numPages),current:"Page "+n});}
+ return zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:3}});
 }
 export async function mergePdfs(files,{maxPages=DEFAULT_LIMITS.maxPages,onProgress=()=>{}}={}){
  validateFiles(files);const output=await PDFDocument.create();let total=0;
