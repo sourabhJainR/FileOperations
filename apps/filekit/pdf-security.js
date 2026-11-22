@@ -11,7 +11,7 @@ export async function lockPdf(file,{userPassword,ownerPassword,permissions={prin
 export async function unlockPdf(file,{password,maxPages=DEFAULT_LIMITS.maxPages}={}){
  if(typeof password!=="string"||password.length>256)throw new FileKitError("INVALID_PASSWORD","Enter the PDF open or owner password.");
  const bytes=new Uint8Array(await file.arrayBuffer());
- let doc;try{doc=await PDFDocument.load(bytes,{password});}catch(error){const message=String(error?.message||error);if(/password|decrypt|encrypt/i.test(message))throw new FileKitError("PDF_PASSWORD_INVALID","The password is incorrect or this PDF uses an unsupported encryption method.");throw error;}
+ let doc;try{doc=await PDFDocument.load(bytes,{ignoreEncryption:true,password});}catch(error){const message=String(error?.message||error);if(/password|decrypt|encrypt/i.test(message))throw new FileKitError("PDF_PASSWORD_INVALID","The password is incorrect or this PDF uses an unsupported encryption method.");throw error;}
  if(doc.getPageCount()>maxPages)throw new FileKitError("PAGE_LIMIT","PDF exceeds the configured page limit.");
  return new Blob([await doc.save()],{type:"application/pdf"});
 }
