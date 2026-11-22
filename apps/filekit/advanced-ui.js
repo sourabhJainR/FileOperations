@@ -14,7 +14,7 @@ const root=document.querySelector("main");const section=document.createElement("
 <div class="field"><label for="fk-files">Files</label><input id="fk-files" type="file" multiple></div>
 <div class="field" id="fk-options"><label for="fk-format">Export format</label><select id="fk-format"><option>csv</option><option>json</option><option>html</option></select></div>
 <div class="field"><label for="fk-value">Page order / watermark / metadata value</label><input id="fk-value" placeholder="Page order, watermark text, metadata JSON, or password"></div>
-<div class="row"><button class="action" id="fk-run">Process advanced task</button><button class="secondary" id="fk-cancel" disabled>Cancel</button><button class="secondary" id="fk-retry" disabled>Retry failed files</button></div>
+<div class="row"><button type="button" class="action" id="fk-run">Process advanced task</button><button type="button" class="secondary" id="fk-cancel" disabled>Cancel</button><button type="button" class="secondary" id="fk-retry" disabled>Retry failed files</button></div>
 <progress id="fk-progress" max="100" value="0" style="width:100%;margin-top:14px"></progress><p id="fk-status" role="status" aria-live="polite"></p><div id="fk-results"></div>`;
 root.append(section);
 const $=id=>document.getElementById(id);let activeRunner=null,lastRetry=null,ocrWorker=null;
