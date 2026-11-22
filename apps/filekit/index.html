@@ -68,19 +68,7 @@ else if(tool==='info'){$('preview').innerHTML='<div class="diff">'+files.map(f=>
 else $('status').textContent='Select a tool from the left.';
 $('status').textContent='Done. Download(s) created. Check format fidelity before relying on converted files.'}catch(e){$('status').textContent='Failed: '+e.message} }
 $('run').onclick=run;select('home');
-</script><script type="module">
-import * as PDFLibModule from "pdf-lib";
-import * as pdfjs from "pdfjs-dist";
-import * as XLSXModule from "xlsx";
-import JSZipModule from "jszip";
-import * as MammothModule from "mammoth";
-import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-window.PDFLib = PDFLibModule;
-window.pdfjsLib = pdfjs;
-window.XLSX = XLSXModule;
-window.JSZip = JSZipModule;
-window.mammoth = MammothModule;
-pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+</script><script>
 if ("serviceWorker" in navigator && location.protocol !== "file:") {
   window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("Offline cache unavailable", err)));
 }
