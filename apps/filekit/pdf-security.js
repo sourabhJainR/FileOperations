@@ -36,6 +36,9 @@ export async function lockPdf(file, {
   validatePassword(userPassword, "Open password");
   const owner = ownerPassword || createOwnerPassword();
   validatePassword(owner, "Owner password");
+  if (owner === userPassword) {
+    throw new FileKitError("INVALID_PASSWORD", "Owner password must differ from the open password.");
+  }
 
   // pdf-lib provides an independent structural/page-count check. qpdf reads
   // the original Blob through WORKERFS, avoiding a second full input copy.
