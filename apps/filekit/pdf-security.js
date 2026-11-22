@@ -7,11 +7,11 @@ function validatePassword(password,label){if(typeof password!=="string"||passwor
 export async function lockPdf(file,{userPassword,ownerPassword,permissions={printing:"highResolution",modifying:false,copying:false,annotating:false,fillingForms:false,contentAccessibility:true,documentAssembly:false},maxPages=DEFAULT_LIMITS.maxPages,onProgress=()=>{}}={}){
  validatePassword(userPassword,"Open password");validatePassword(ownerPassword||userPassword,"Owner password");
  const bytes=new Uint8Array(await file.arrayBuffer());const doc=await PDFDocument.load(bytes);if(doc.getPageCount()>maxPages)throw new FileKitError("PAGE_LIMIT","PDF exceeds the configured page limit.");
- const owner=ownerPassword||createOwnerPassword();validatePassword(owner,"Owner password");const result=await runQpdf("lock",file,{userPassword,ownerPassword:owner,permissions,onProgress});return new Blob([result],{type:"application/pdf"});
+ const owner=ownerPassword||createOwnerPassword();validatePassword(owner,"Owner password");const result=await runQpdf("lock",bytes,{userPassword,ownerPassword:owner,permissions,onProgress});return new Blob([result],{type:"application/pdf"});
 }
 export async function unlockPdf(file,{password,maxPages=DEFAULT_LIMITS.maxPages,onProgress=()=>{}}={}){
  if(typeof password!=="string"||password.length>256)throw new FileKitError("INVALID_PASSWORD","Enter the PDF open or owner password.");
- const result=await runQpdf("unlock",file,{password,onProgress});
+ const bytes=new Uint8Array(await file.arrayBuffer());\n const result=await runQpdf("unlock",bytes,{password,onProgress});
  const verified=await PDFDocument.load(result);if(verified.getPageCount()>maxPages)throw new FileKitError("PAGE_LIMIT","PDF exceeds the configured page limit.");
  return new Blob([result],{type:"application/pdf"});
 }
