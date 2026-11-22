@@ -1,40 +1,40 @@
 # FileKit
 
-FileKit is a static browser SPA for everyday PDF, image, spreadsheet and text-file tasks. Files are processed in the browser; there is no FileKit upload backend.
+FileKit is a local-first browser file utility. The production build bundles its processing libraries into static assets; no application server or file-upload backend is required.
 
-## Launch
+## Development and build
 
-Open `index.html` from a static server or deploy the directory to GitHub Pages or another static host. CDN-loaded libraries require an internet connection to load. Once loaded, processing uses browser-side APIs.
+Requires Node.js 20 or newer.
 
-## Implemented operations
+```sh
+cd apps/filekit
+npm install
+npm test
+npm run build
+npm run serve
+```
 
-| Tool | Operation | Limitations |
-|---|---|---|
-| PDF merge | Merge selected PDFs | PDF encryption/unsupported features may fail |
-| PDF extract | Extract page ranges | 1-based ranges; output order follows ranges |
-| PDF rotate | Rotate every page | Uses page rotation metadata |
-| PDF compress | Rasterize and rebuild | Lossy; text search, vectors, links and metadata are lost; DPI/quality control |
-| PDF compare | Extracted text comparison | Not a visual or OCR comparison |
-| PDF to text | Text extraction | No OCR for scanned pages |
-| PDF to PNG | Render pages | ZIP output |
-| Images to PDF | JPEG/PNG images to PDF | Other formats may need conversion first |
-| Image resize/convert | Resize and encode PNG/JPEG/WebP | Fit within bounds; does not upscale |
-| Image compare | Pixel-level difference | Same dimensions only for pixel diff |
-| Spreadsheet export | First worksheet CSV/JSON/HTML | No workbook editing; first worksheet only |
-| Spreadsheet compare | Compare first sheet rows | Basic row-level comparison |
-| DOCX text | Extract raw text | Formatting not preserved |
-| Text/HTML | Save text or escaped HTML | Simple conversion |
-| ZIP | Pack selected files | Extraction workflow produces archive of extracted entries |
-| File info | Name, MIME, size, modified time | Basic metadata only |
+Deploy the contents of `dist/` to a static HTTPS host. The service worker caches the application shell and same-origin build assets after the first successful visit. The first visit and initial dependency installation/build require network access. Do not describe first-use as offline. For a fully air-gapped deployment, distribute the built `dist/` directory internally and verify it in the target browser.
 
-## Privacy and safety
+## Processing foundations added
 
-- Files are read in the browser and not sent to FileKit servers.
-- Library scripts are loaded from pinned CDN URLs. This is not an audited, offline, or supply-chain-verified release.
-- Avoid processing sensitive documents in this prototype until dependencies and deployment are independently audited.
-- Converted files may lose formatting, metadata, signatures, formulas, OCR content or other fidelity.
-- No password recovery, OCR, document-signature validation or advanced Office conversion is offered.
+- Batch runner with bounded concurrency (1–8), per-file failure isolation, progress callbacks and AbortSignal cancellation.
+- File count, per-file byte, total batch byte, page count and rendered-pixel budgets.
+- Structured error codes and sanitized output/archive path helpers. ZIP extraction must reject traversal paths before writing entries.
+- Multi-sheet spreadsheet export to CSV, JSON or HTML, and sheet-by-sheet comparison including missing sheets and cell coordinates.
+- PDF visual comparison by rendering corresponding pages with PDF.js, calculating changed-pixel percentages and producing a red difference overlay. It reports missing pages and differing render dimensions. It is a raster comparison, not a guarantee of semantic equivalence.
+- Local npm dependencies and Vite build replace runtime CDN dependencies. A service worker caches same-origin production assets after first load.
 
-## Validation status
+## Current limitations and safety
 
-This is an initial prototype delivered via GitHub file API. It has not yet been executed in a browser, run through automated tests, or validated against real-world sample files. Treat those gates as pending.
+The existing UI still contains legacy single-operation handlers. The new batch runner, multi-sheet APIs and PDF visual comparison modules are foundations and are not yet wired into every UI workflow. Cancellation is cooperative; operations must pass the provided AbortSignal and check it between expensive steps. ZIP traversal validation must be applied to every archive entry before extraction. Do not process untrusted archives until that integration is complete.
+
+Resource limits in `core.js` are defaults and should be tuned using supported-device testing. Browser memory can exceed file size by several times during PDF/image decoding. Encrypted PDFs, malformed Office files, macros, embedded objects, digital signatures and conversion fidelity require separate validation. No OCR is provided. PDF raster comparison depends on render scale and threshold; it does not compare hidden metadata, text semantics, signatures or vector structure.
+
+## Automated tests
+
+`npm test` runs Node's built-in regression suite for file limits, path sanitization, batch progress/error isolation/cancellation, pixel budgets and multi-sheet spreadsheet behavior. PDF canvas rendering needs browser-level tests and representative fixtures; it is not covered by the Node suite.
+
+## Privacy
+
+File content is processed locally in the browser. The app does not upload selected files to a FileKit backend. A static host serves the application assets. Treat browser extensions, compromised devices and downloaded outputs as outside this application's privacy boundary.
