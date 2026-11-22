@@ -1,0 +1,35 @@
+import { safeOutputName, FileKitError } from "./core.js";
+/** Multi-sheet workbook operations. XLSX is injected to keep the module testable. */
+export function listSheets(workbook) { return [...(workbook?.SheetNames || [])]; }
+export function exportWorkbook(workbook, XLSX, format = "csv") {
+  const sheets = listSheets(workbook);
+  if (!sheets.length) throw new FileKitError("EMPTY_WORKBOOK", "The workbook has no worksheets.");
+  return sheets.map((name, index) => {
+    const sheet = workbook.Sheets[name];
+    let content, extension, type;
+    if (format === "csv") { content = XLSX.utils.sheet_to_csv(sheet); extension = "csv"; type = "text/csv;charset=utf-8"; }
+    else if (format === "json") { content = JSON.stringify(XLSX.utils.sheet_to_json(sheet, { defval: null, raw: false }), null, 2); extension = "json"; type = "application/json"; }
+    else if (format === "html") { content = XLSX.utils.sheet_to_html(sheet); extension = "html"; type = "text/html;charset=utf-8"; }
+    else throw new FileKitError("UNSUPPORTED_EXPORT", `Unsupported spreadsheet export: ${format}`);
+    return { sheet: name, index, name: safeOutputName(name, `sheet-${index + 1}`) + "." + extension, content, type };
+  });
+}
+export function compareWorkbooks(left, right, XLSX) {
+  const leftNames = listSheets(left), rightNames = listSheets(right);
+  const names = [...new Set([...leftNames, ...rightNames])];
+  return names.map(name => {
+    const a = left.Sheets[name], b = right.Sheets[name];
+    if (!a || !b) return { sheet: name, status: "missing", left: !!a, right: !!b, differences: [] };
+    const rowsA = XLSX.utils.sheet_to_json(a, { header: 1, defval: null, raw: false });
+    const rowsB = XLSX.utils.sheet_to_json(b, { header: 1, defval: null, raw: false });
+    const differences = [];
+    for (let row = 0; row < Math.max(rowsA.length, rowsB.length); row++) {
+      const x = rowsA[row] || [], y = rowsB[row] || [];
+      for (let col = 0; col < Math.max(x.length, y.length); col++) {
+        if (JSON.stringify(x[col] ?? null) !== JSON.stringify(y[col] ?? null))
+          differences.push({ row: row + 1, column: col + 1, left: x[col] ?? null, right: y[col] ?? null });
+      }
+    }
+    return { sheet: name, status: differences.length ? "different" : "equal", differences };
+  });
+}
