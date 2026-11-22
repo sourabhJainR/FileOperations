@@ -1,0 +1,1 @@
+Browser tests live at the repository root and exercise the FileKit production preview server. Run with `npm run test:browser` from apps/filekit after installing the root Playwright dependency. The CI workflow installs Chromium before running them. Offline validation checks the shell after the service worker has taken control; first visit still requires network access.
