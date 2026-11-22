@@ -51,7 +51,7 @@ The current legacy spreadsheet UI exports and compares the first sheet only; use
 
 AES-256 encryption and authenticated decryption run locally through qpdf WebAssembly. The worker keeps CPU-heavy processing off the main UI thread. A wrong password or unsupported encryption is reported as a failure; FileKit does not bypass passwords. PDF permission flags are reader-enforced hints, not DRM.
 
-## Release status\n\nThese advanced PDF security features are under review in a follow-up pull request. They are not part of a published release until the pull request is merged and a tagged release is created.\n\n## Fidelity and privacy
+## Release status\n\nThe PDF security, document composition, workbook consolidation and nested ZIP workflows are implemented and have passed the current Node, production-build and Chromium regression gates. They are in [PR #5](https://github.com/sourabhJainR/FileOperations/pull/5) awaiting merge. They are not part of a published release until PR #5 is merged and a tagged release is created.\n\n## Fidelity and privacy
 
 PDF raster compression is lossy and removes selectable text/vector content. PDF pixel comparison depends on render scale and threshold; it does not prove semantic equivalence or compare signatures/metadata. Browser memory can exceed source file size by several times during decoding. Tune limits with target-device testing.
 
