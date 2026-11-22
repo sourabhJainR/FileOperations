@@ -94,4 +94,4 @@ select('home');
 if ("serviceWorker" in navigator && location.protocol !== "file:") {
   window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("Offline cache unavailable", err)));
 }
-</script></body></html>
+</script><script type="module" src="./advanced-ui.js"></script></body></html>
