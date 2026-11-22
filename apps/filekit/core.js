@@ -14,7 +14,7 @@ export function validateFiles(files, limits = DEFAULT_LIMITS) {
   return { count: files.length, totalBytes: total };
 }
 export function safeOutputName(name, fallback = "output") {
-  const clean = String(name || "").normalize("NFKC").replace(/[\\/\\0-\\r\\n<>:"|?*]/g, "_").replace(/^\.+/, "").trim();
+    const clean = String(name || "").normalize("NFKC").replace(/[\/\0\r\n<>:"|?*\\]/g, "_").replace(/^\.+/, "").trim();
   return (clean || fallback).slice(0, 180);
 }
 export function safeArchivePath(path) {
@@ -31,7 +31,7 @@ export function createTaskRunner({ onProgress = () => {}, signal } = {}) {
   const check = () => { if (controller.signal.aborted) throw new FileKitError("CANCELLED", "Processing was cancelled."); };
   async function run(items, worker, { concurrency = 1 } = {}) {
     if (!Array.isArray(items)) throw new FileKitError("INVALID_BATCH", "Batch input must be a list.");
-    const results = new Array(items.length), errors = [];
+    const results = new Array(items.length).fill(undefined), errors = [];
     let next = 0, completed = 0;
     const total = items.length;
     const execute = async () => {
