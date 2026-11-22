@@ -1,40 +1,41 @@
 # FileKit
 
-FileKit is a local-first browser file utility. The production build bundles its processing libraries into static assets; no application server or file-upload backend is required.
+FileKit is a local-first browser file utility. The production build bundles processing libraries into static assets; no application server or file-upload backend is required.
+
+## Install and use
+
+Serve the built app from HTTPS (or localhost). Open FileKit, choose an operation from the Overview tiles or left navigation, add files, review the operation's fidelity warning, and select Process. Use the header's **Install FileKit** button when the browser exposes an install prompt. If it does not, use the browser menu (Install app / Add to Home Screen); iOS uses Share → Add to Home Screen.
+
+The PWA shell is cached after the first successful visit. First visit, dependency installation and build need network access. Browser storage can be evicted. This is not an air-gapped first-run installer.
 
 ## Development and build
 
 Requires Node.js 20 or newer.
 
 ```sh
-cd apps/filekit
 npm install
 npm test
 npm run build
 npm run serve
 ```
 
-Deploy the contents of `dist/` to a static HTTPS host. The service worker caches the application shell and same-origin build assets after the first successful visit. The first visit and initial dependency installation/build require network access. Do not describe first-use as offline. For a fully air-gapped deployment, distribute the built `dist/` directory internally and verify it in the target browser.
+## Processing foundations
 
-## Processing foundations added
+- Bounded batch runner, progress callbacks, cancellation signals and per-file error isolation.
+- File count, per-file byte, batch byte, page count and pixel budgets.
+- Sanitized output names and archive path validation helpers.
+- Multi-sheet spreadsheet export and comparison APIs.
+- PDF page rendering and pixel-difference comparison APIs.
+- Local npm dependencies, Vite build, web app manifest and service-worker shell caching.
 
-- Batch runner with bounded concurrency (1–8), per-file failure isolation, progress callbacks and AbortSignal cancellation.
-- File count, per-file byte, total batch byte, page count and rendered-pixel budgets.
-- Structured error codes and sanitized output/archive path helpers. ZIP extraction must reject traversal paths before writing entries.
-- Multi-sheet spreadsheet export to CSV, JSON or HTML, and sheet-by-sheet comparison including missing sheets and cell coordinates.
-- PDF visual comparison by rendering corresponding pages with PDF.js, calculating changed-pixel percentages and producing a red difference overlay. It reports missing pages and differing render dimensions. It is a raster comparison, not a guarantee of semantic equivalence.
-- Local npm dependencies and Vite build replace runtime CDN dependencies. A service worker caches same-origin production assets after first load.
+## Current UI coverage and known gaps
 
-## Current limitations and safety
+The existing UI still has legacy single-operation handlers. Multi-sheet workbook APIs and PDF visual comparison are not yet fully connected to the user interface. Batch progress/cancellation and resource budgets are not enforced in every operation. ZIP extraction must reject unsafe paths and enforce entry/expanded-byte limits before writing each entry. Do not use archive extraction with untrusted input until this is complete.
 
-The existing UI still contains legacy single-operation handlers. The new batch runner, multi-sheet APIs and PDF visual comparison modules are foundations and are not yet wired into every UI workflow. Cancellation is cooperative; operations must pass the provided AbortSignal and check it between expensive steps. ZIP traversal validation must be applied to every archive entry before extraction. Do not process untrusted archives until that integration is complete.
+The current spreadsheet UI exports and compares the first sheet only. PDF comparison in the legacy UI is text extraction, not the new visual comparison API. Image operations do not promise metadata, animation or color-profile preservation. DOCX support extracts text only. There is no OCR, redaction, digital signature, macro execution or server-side conversion.
 
-Resource limits in `core.js` are defaults and should be tuned using supported-device testing. Browser memory can exceed file size by several times during PDF/image decoding. Encrypted PDFs, malformed Office files, macros, embedded objects, digital signatures and conversion fidelity require separate validation. No OCR is provided. PDF raster comparison depends on render scale and threshold; it does not compare hidden metadata, text semantics, signatures or vector structure.
+## Fidelity and privacy
 
-## Automated tests
+PDF raster compression is lossy and removes selectable text/vector content. PDF pixel comparison depends on render scale and threshold; it does not prove semantic equivalence or compare signatures/metadata. Browser memory can exceed source file size by several times during decoding. Tune limits with target-device testing.
 
-`npm test` runs Node's built-in regression suite for file limits, path sanitization, batch progress/error isolation/cancellation, pixel budgets and multi-sheet spreadsheet behavior. PDF canvas rendering needs browser-level tests and representative fixtures; it is not covered by the Node suite.
-
-## Privacy
-
-File content is processed locally in the browser. The app does not upload selected files to a FileKit backend. A static host serves the application assets. Treat browser extensions, compromised devices and downloaded outputs as outside this application's privacy boundary.
+Files are processed locally in the browser and are not uploaded to a FileKit processing backend. Browser extensions, compromised devices and downloaded outputs remain outside this privacy boundary.
