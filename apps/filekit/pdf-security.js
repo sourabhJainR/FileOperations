@@ -2,7 +2,8 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { FileKitError, DEFAULT_LIMITS } from "./core.js";
 import { runQpdf } from "./pdf-qpdf.js";
 const MIN_PASSWORD_LENGTH=8;
-function createOwnerPassword(){const bytes=crypto.getRandomValues(new Uint8Array(32));return Array.from(bytes,x=>x.toString(16).padStart(2,"0")).join("");}\nfunction validatePassword(password,label){if(typeof password!=="string"||password.length<MIN_PASSWORD_LENGTH||password.length>256)throw new FileKitError("INVALID_PASSWORD",label+" must be between 8 and 256 characters.");if(password.trim().length===0)throw new FileKitError("INVALID_PASSWORD",label+" cannot be blank.");}
+function createOwnerPassword(){const bytes=crypto.getRandomValues(new Uint8Array(32));return Array.from(bytes,x=>x.toString(16).padStart(2,"0")).join("");}
+function validatePassword(password,label){if(typeof password!=="string"||password.length<MIN_PASSWORD_LENGTH||password.length>256)throw new FileKitError("INVALID_PASSWORD",label+" must be between 8 and 256 characters.");if(password.trim().length===0)throw new FileKitError("INVALID_PASSWORD",label+" cannot be blank.");}
 export async function lockPdf(file,{userPassword,ownerPassword,permissions={printing:"highResolution",modifying:false,copying:false,annotating:false,fillingForms:false,contentAccessibility:true,documentAssembly:false},maxPages=DEFAULT_LIMITS.maxPages,onProgress=()=>{}}={}){
  validatePassword(userPassword,"Open password");validatePassword(ownerPassword||userPassword,"Owner password");
  const bytes=new Uint8Array(await file.arrayBuffer());const doc=await PDFDocument.load(bytes);if(doc.getPageCount()>maxPages)throw new FileKitError("PAGE_LIMIT","PDF exceeds the configured page limit.");
