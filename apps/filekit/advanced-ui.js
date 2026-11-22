@@ -18,7 +18,8 @@ root.append(section);
 const $=id=>document.getElementById(id);let activeRunner=null,lastRetry=null,ocrWorker=null;
 function status(s){$("fk-status").textContent=s}
 function save(blob,name){const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=safeOutputName(name);a.click();setTimeout(()=>URL.revokeObjectURL(url),30000)}
-function selected(){return [...$("fk-files").files]}\nfunction configureRetry(files,errors){const failed=errors.map(e=>files[e.index]).filter(Boolean);lastRetry=()=>{const transfer=new DataTransfer();failed.forEach(file=>transfer.items.add(file));$("fk-files").files=transfer.files;$("fk-run").click();};$("fk-retry").disabled=!failed.length;}
+function selected(){return [...$("fk-files").files]}
+function configureRetry(files,errors){const failed=errors.map(e=>files[e.index]).filter(Boolean);lastRetry=()=>{const transfer=new DataTransfer();failed.forEach(file=>transfer.items.add(file));$("fk-files").files=transfer.files;$("fk-run").click();};$("fk-retry").disabled=!failed.length;}
 function renderRows(rows){const box=$("fk-results");box.replaceChildren();for(const r of rows){const div=document.createElement("div");div.className="diff";div.textContent=typeof r==="string"?r:JSON.stringify(r,null,2);box.append(div)}}
 $("fk-operation").addEventListener("change",()=>{const op=$("fk-operation").value;$("fk-format").parentElement.hidden=op!=="xlsx-export";$("fk-value").parentElement.hidden=!["pdf-reorder","pdf-watermark","pdf-metadata-update"].includes(op);$("fk-files").accept=op.startsWith("zip")?".zip":op.startsWith("xlsx")?".xlsx,.xls,.csv":op.startsWith("pdf")?".pdf":"image/*";});
 $("fk-operation").dispatchEvent(new Event("change"));
