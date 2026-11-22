@@ -3,7 +3,8 @@ import { extractZipSafely, packFiles } from "./archive.js";
 import { exportWorkbook, compareWorkbooks } from "./spreadsheet.js";
 import { comparePdfVisual } from "./pdf-visual.js";
 import { reorderPdf, watermarkPdf, inspectPdfMetadata, updatePdfMetadata } from "./pdf-tools.js";
-import { createWorker } from "tesseract.js";\nimport { ocrImage } from "./ocr.js";
+import { createWorker } from "tesseract.js";
+import { ocrImage } from "./ocr.js";
 const root=document.querySelector("main");const section=document.createElement("section");section.className="workspace";section.style.marginTop="22px";section.innerHTML=`
 <h2>Advanced tools</h2><p class="sub">Secure archive handling, multi-sheet workbooks, visual PDF review, batch jobs and document utilities.</p>
 <div class="field"><label for="fk-operation">Operation</label><select id="fk-operation" aria-label="Operation">
