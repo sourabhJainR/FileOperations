@@ -8,7 +8,7 @@ import { ocrImage } from "./ocr.js";
 import { lockPdf, unlockPdf, addPdfPageNumbers, flattenPdfForms } from "./pdf-security.js";
 import { imagesToPdf, documentsToPdf, filesToPdf, mergePdfs, pdfToDocx, pdfToImages } from "./document-tools.js";
 import { combineWorkbooks } from "./spreadsheet.js";
-import { extractZipTree } from "./archive.js";
+import { extractZipTree, extractZipBatch } from "./archive.js";
 const root=document.querySelector("main");const section=document.createElement("section");section.className="workspace";section.style.marginTop="22px";section.innerHTML=`
 <h2>Advanced tools</h2><p class="sub">Secure archive handling, multi-sheet workbooks, visual PDF review, batch jobs and document utilities.</p>
 <div class="field"><label for="fk-operation">Operation</label><select id="fk-operation" aria-label="Operation">
@@ -35,7 +35,7 @@ try{if(op==="zip-process"){
  validateFiles(files);if(files.some(f=>!/\.zip$/i.test(f.name)))throw new Error("Choose ZIP files only.");
  activeRunner=createTaskRunner({onProgress:p=>{$("fk-progress").value=p.percent;status(`Inspecting archive ${p.completed}/${p.total}: ${p.current}`)}});
  $("fk-cancel").disabled=false;
- const result=await activeRunner.run(files,(f)=>extractZipTree(f,{signal:activeRunner.signal,onProgress:p=>{$("fk-progress").value=p.percent;status(`Extracting ${f.name}: ${p.current} (${p.entries||p.completed} entries)`);}}));
+ const result=await extractZipBatch(files,{signal:activeRunner.signal,onProgress:p=>{$("fk-progress").value=Math.round(((p.fileIndex+(p.percent/100))/p.fileCount)*100);status(`Extracting ${p.file}: ${p.current} (${p.expandedBytes||0} bytes in current archive)`);}});
  const errors=result.errors;if(errors.length)renderRows(errors);const extracted=result.results.filter(Boolean).flatMap(x=>x.files);
  if(!extracted.length)throw new Error("No files were found in the ZIP archive tree.");
  validateFiles(extracted);const action=$("fk-nested-operation").value;
