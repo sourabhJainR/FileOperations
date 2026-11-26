@@ -17,6 +17,7 @@ concurrency:
 jobs:
   test-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: apps/filekit
@@ -30,9 +31,20 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm test
       - run: npm run build
-      - name: Verify built entry point
-        run: test -s dist/index.html
+      - name: Verify built entry point and static app assets
+        run: |
+          test -s dist/index.html
+          test -s dist/service-worker.js
+          test -s dist/manifest.webmanifest
+          test -s dist/icons/filekit.svg
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Run browser regression tests
         run: npm run test:browser
+      - name: Upload Playwright failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: filekit-playwright-results
+          path: apps/filekit/test-results/
+          if-no-files-found: ignore
