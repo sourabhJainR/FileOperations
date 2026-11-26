@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
-const manifest = JSON.parse(await readFile(new URL("../manifest.webmanifest", import.meta.url), "utf8"));
-const worker = await readFile(new URL("../service-worker.js", import.meta.url), "utf8");
+const manifest = JSON.parse(await readFile(new URL("../public/manifest.webmanifest", import.meta.url), "utf8"));
+const worker = await readFile(new URL("../public/service-worker.js", import.meta.url), "utf8");
 
 test("FileKit exposes install and use actions", () => {
   assert.match(html, /id="installApp"/);
@@ -29,7 +29,7 @@ test("production app bundles its processing libraries locally", () => {
 test("PWA manifest and service worker include install shell assets", () => {
   assert.equal(manifest.display, "standalone");
   assert.ok(manifest.icons.some(icon => icon.src === "./icons/filekit.svg"));
-  assert.match(worker, /filekit-static-v2/);
+  assert.match(worker, /filekit-static-v3/);
   assert.match(worker, /\.\/manifest\.webmanifest/);
   assert.match(worker, /\.\/icons\/filekit\.svg/);
 });

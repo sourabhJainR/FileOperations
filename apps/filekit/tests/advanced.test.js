@@ -8,3 +8,32 @@ test("PDF watermark and metadata update preserve page count",async()=>{const {PD
 
 test("ZIP extraction enforces declared expansion limits before decompressing",async()=>{const zip=new JSZip();zip.file("large.txt","0123456789");const blob=await zip.generateAsync({type:"blob"});const file=new File([blob],"fixture.zip");await assert.rejects(()=>extractZipSafely(file,{maxEntryBytes:5,maxExpandedBytes:20}),e=>e.code==="ZIP_ENTRY_TOO_LARGE");});
 test("ZIP extraction streams bounded entries into a clean output archive",async()=>{const zip=new JSZip();zip.file("reports/a.txt","hello");const blob=await zip.generateAsync({type:"blob"});const result=await extractZipSafely(new File([blob],"fixture.zip"));assert.equal(result.entries,1);assert.equal(result.expandedBytes,5);const out=await JSZip.loadAsync(await result.blob.arrayBuffer());assert.equal(await out.file("reports/a.txt").async("string"),"hello");});
+
+test("PDF security rejects weak passwords and missing unlock credentials",async()=>{const {PDFDocument}=await import("pdf-lib");const {lockPdf,unlockPdf}=await import("../pdf-security.js");const d=await PDFDocument.create();d.addPage();const plain=new File([await d.save()],"plain.pdf");await assert.rejects(()=>lockPdf(plain,{userPassword:"short"}),e=>e.code==="INVALID_PASSWORD");await assert.rejects(()=>lockPdf(plain,{userPassword:"same-open-password",ownerPassword:"same-open-password"}),e=>e.code==="INVALID_PASSWORD");await assert.rejects(()=>unlockPdf(plain,{}),e=>e.code==="INVALID_PASSWORD");});
+test("PDF page numbering and form flattening preserve document pages",async()=>{const {PDFDocument}=await import("pdf-lib");const {addPdfPageNumbers,flattenPdfForms}=await import("../pdf-security.js");const d=await PDFDocument.create();d.addPage();d.addPage();const f=new File([await d.save()],"plain.pdf");const numbered=await addPdfPageNumbers(f,{format:"Page {page} of {pages}"});assert.equal((await PDFDocument.load(await numbered.arrayBuffer())).getPageCount(),2);const flattened=await flattenPdfForms(f);assert.equal((await PDFDocument.load(await flattened.arrayBuffer())).getPageCount(),2);});
+
+test("recursive ZIP extraction expands nested archives with safe prefixed paths",async()=>{const inner=new JSZip();inner.file("docs/report.txt","nested content");const innerBlob=await inner.generateAsync({type:"uint8array"});const outer=new JSZip();outer.file("level1/inner.zip",innerBlob);outer.file("root.txt","top level");const outerBlob=await outer.generateAsync({type:"blob"});const {extractZipTree}=await import("../archive.js");const result=await extractZipTree(new File([outerBlob],"outer.zip"));assert.equal(result.archives,1);assert.equal(result.files.length,2);assert.equal(result.files.find(x=>x.name.endsWith("report.txt")).name,"level1/inner/docs/report.txt");assert.equal(await result.files.find(x=>x.name==="root.txt").text(),"top level");});
+test("recursive ZIP extraction enforces one shared entry budget",async()=>{const inner=new JSZip();inner.file("a.txt","a");const innerBlob=await inner.generateAsync({type:"uint8array"});const outer=new JSZip();outer.file("inner.zip",innerBlob);outer.file("b.txt","b");const blob=await outer.generateAsync({type:"blob"});const {extractZipTree}=await import("../archive.js");await assert.rejects(()=>extractZipTree(new File([blob],"outer.zip"),{maxEntries:2}),e=>e.code==="ZIP_ENTRY_LIMIT");});
+test("workbook consolidation keeps every sheet and disambiguates names",async()=>{const XLSX=(await import("xlsx")).default;const {combineWorkbooks}=await import("../spreadsheet.js");const a=XLSX.utils.book_new(),b=XLSX.utils.book_new();XLSX.utils.book_append_sheet(a,XLSX.utils.aoa_to_sheet([["id"],[1]]),"Data");XLSX.utils.book_append_sheet(a,XLSX.utils.aoa_to_sheet([["id"],[2]]),"Other");XLSX.utils.book_append_sheet(b,XLSX.utils.aoa_to_sheet([["id"],[3]]),"Data");const bytes=combineWorkbooks([{name:"North.xlsx",workbook:a},{name:"South.xlsx",workbook:b}],XLSX);const out=XLSX.read(bytes,{type:"array"});assert.equal(out.SheetNames.length,3);assert.ok(out.SheetNames.some(x=>x.startsWith("North_Data")));assert.ok(out.SheetNames.some(x=>x.startsWith("South_Data")));});
+test("PDF merge preserves all pages from selected source files",async()=>{const {PDFDocument}=await import("pdf-lib");const {mergePdfs}=await import("../document-tools.js");const a=await PDFDocument.create(),b=await PDFDocument.create();a.addPage();b.addPage();b.addPage();const result=await mergePdfs([new File([await a.save()],"a.pdf"),new File([await b.save()],"b.pdf")]);assert.equal((await PDFDocument.load(await result.arrayBuffer())).getPageCount(),3);});
+
+
+test("selected nested ZIP files share one expanded-byte budget",async()=>{
+ const {extractZipBatch}=await import("../archive.js");
+ const make=async(name,path,value)=>{const zip=new JSZip();zip.file(path,value);return new File([await zip.generateAsync({type:"uint8array"})],name);};
+ const files=[await make("first.zip","a.txt","123456"),await make("second.zip","b.txt","abcdef")];
+ const result=await extractZipBatch(files,{maxExpandedBytes:10});
+ assert.equal(result.results.filter(Boolean).length,1);
+ assert.equal(result.errors.length,1);
+ assert.equal(result.errors[0].error.code,"ZIP_EXPANDED_LIMIT");
+ assert.equal(result.expandedBytes,6);
+});
+
+test("selected nested ZIP files share one entry-count budget",async()=>{
+ const {extractZipBatch}=await import("../archive.js");
+ const make=async(name,path)=>{const zip=new JSZip();zip.file(path,"x");return new File([await zip.generateAsync({type:"uint8array"})],name);};
+ const result=await extractZipBatch([await make("first.zip","a.txt"),await make("second.zip","b.txt")],{maxEntries:1});
+ assert.equal(result.results.filter(Boolean).length,1);
+ assert.equal(result.errors[0].error.code,"ZIP_ENTRY_LIMIT");
+ assert.equal(result.entries,1);
+});
