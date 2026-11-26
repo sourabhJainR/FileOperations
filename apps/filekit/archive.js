@@ -1,5 +1,5 @@
 import JSZip from "jszip";
-import { DEFAULT_LIMITS, FileKitError, safeArchivePath, safeOutputName } from "./core.js";
+import { DEFAULT_LIMITS, FileKitError, normalizeError, safeArchivePath, safeOutputName } from "./core.js";
 function readEntryBounded(entry,limit,path,signal){
  return new Promise((resolve,reject)=>{const stream=entry.internalStream("uint8array");const chunks=[];let size=0,settled=false;
  const fail=e=>{if(settled)return;settled=true;try{stream.pause();}catch{}reject(e);};
@@ -52,4 +52,40 @@ export async function extractZipTree(file,{maxDepth=5,maxEntries=DEFAULT_LIMITS.
  await walk(await file.arrayBuffer(),file.name,"",0);
  onProgress({completed:state.entries,total:state.entries,percent:100,current:file.name,expandedBytes:state.expandedBytes});
  return {files:state.files,entries:state.entries,archives:state.archives,expandedBytes:state.expandedBytes};
+}
+
+
+/**
+ * Extract a selected ZIP batch under one shared entry and expanded-byte budget.
+ * Work is sequential so concurrent archives cannot reserve the same remaining
+ * capacity. Failed archives do not reset the budget already consumed by prior
+ * successful archives.
+ */
+export async function extractZipBatch(files, { maxDepth = 5, maxEntries = DEFAULT_LIMITS.maxZipEntries, maxExpandedBytes = DEFAULT_LIMITS.maxZipExpandedBytes, maxEntryBytes = DEFAULT_LIMITS.maxFileBytes, signal, onProgress = () => {} } = {}) {
+  if (!Array.isArray(files)) throw new FileKitError("INVALID_BATCH", "ZIP batch input must be a list.");
+  const results = new Array(files.length).fill(undefined);
+  const errors = [];
+  let entries = 0;
+  let expandedBytes = 0;
+  for (let index = 0; index < files.length; index++) {
+    if (signal?.aborted) throw new FileKitError("CANCELLED", "Nested archive processing was cancelled.");
+    const file = files[index];
+    try {
+      const result = await extractZipTree(file, {
+        maxDepth,
+        maxEntries: Math.max(0, maxEntries - entries),
+        maxExpandedBytes: Math.max(0, maxExpandedBytes - expandedBytes),
+        maxEntryBytes,
+        signal,
+        onProgress: progress => onProgress({ ...progress, file: file.name, fileIndex: index, fileCount: files.length }),
+      });
+      entries += result.entries;
+      expandedBytes += result.expandedBytes;
+      results[index] = result;
+    } catch (error) {
+      if (signal?.aborted || error?.code === "CANCELLED") throw error;
+      errors.push({ index, name: file?.name, error: normalizeError(error, file?.name) });
+    }
+  }
+  return { results, errors, entries, expandedBytes, completed: files.length, total: files.length, ok: errors.length === 0 };
 }
